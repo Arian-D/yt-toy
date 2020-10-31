@@ -8,6 +8,10 @@ import GHC.Generics
 import Data.Aeson
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Catch (MonadThrow)
+import System.Process (callCommand)
+
+youtubify :: String -> String
+youtubify videoId = "https://youtube.com/watch?v=" ++ videoId
 
 search :: (MonadIO m, MonadThrow m) => String -> m  L8.ByteString
 search query =
@@ -24,10 +28,16 @@ data SearchResult = SearchResult
 -- TODO: Manual parse to detect type
 instance FromJSON SearchResult 
 
-
 main :: IO ()
 main = do
-  result <- search "mingus"
+  result <- search "belle delphine"
   let decoded = decode result :: Maybe [SearchResult]
-  case decoded of Just l -> mapM_ print l
+  case decoded of Just l -> mapM_ print (zip [0..] l)
                   Nothing -> putStrLn "rip"
+  input <- getLine
+  let number = read input :: Int -- Change to readEither or readMaybe
+  let id = fmap (\r -> videoId r) $ (!!number) <$> decoded
+  let url = fmap (youtubify) id
+  case url of Just link -> callCommand ("mpv " ++ link)
+              Nothing -> putStrLn "oh well"
+  
